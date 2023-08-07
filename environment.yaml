@@ -1,0 +1,9 @@
+name: time_series_ensembles
+channels:
+  - defaults
+dependencies:
+  - python>=3.9
+  - numpy
+  - matplotlib
+  - pandas
+  - scikit-learn
