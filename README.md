@@ -30,7 +30,9 @@ Current issues that are being discussed are:
 To install the project on your computer locally, please follow these steps:
 
 1).  Fork the repo to your own account
+
 2).  Copy the URL of the git file (this is not the public url of the repo)
+
 3).  From your command line or in Github Desktop run the command `git clone git_repo_location`
 
 To install the dependencies, you can then run the commands:
