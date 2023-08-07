@@ -43,11 +43,12 @@ To install the dependencies, you can then run the commands:
 `pip install -r requirements.txt`
 
 ### With Anaconda 🐍
-If you'd like to create a development environment with anaconda, you can install everything you need with the `environment.yml` file by following these steps:
+If you'd like to create a development environment with anaconda, you can install everything you need with the `environment.yaml` file by following these steps:
 
 First navigate into the root directory of the repo with this line:
 
 `cd time-series-ensembles`
+
 `conda env create -f environment.yaml`
 
 If you then want to activate that environment you can do so with the command:
