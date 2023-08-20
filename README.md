@@ -64,7 +64,7 @@ An example of this command would be: `python -m src.experiment "linear regressio
 The current list of datasets and experiments that have been conducted are listed below:
 
 | Dataset   | Experiment Name                      |
-| -------------------------------------------------|
+| --------- | -------------------------------------|
 | car_parts | linear regression detrended demeaned |
 
 Other arguments can be found in the `experiment.py` file to specify experiment parameters, if you wish.
