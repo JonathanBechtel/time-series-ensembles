@@ -245,7 +245,7 @@ def run_experiment(name: str,
     # this will take awhile to run -- maybe 1 - 3 hrs
     # this df will contain a column of predictions for each lookback window size
     lookback_preds = build_lookback_predictions(model, 
-                                                df[:204], 
+                                                df, 
                                                 splitter = splitter,
                                                 max_window_length = max_window_length,
                                                 hierarchical = hierarchical)
