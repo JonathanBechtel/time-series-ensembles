@@ -16,8 +16,8 @@ The current roadmap is this:
  - [x] Collect initial datasets to use for the project
  - [ ] Write preprocessing steps that can do the necessary data transformations to get each dataset ready for modeling
  - [ ] Create some sort of scheme for the different datasets to note how to handle them for modeling
- - [ ] Create starter notebooks with sample code for other people to visually explore the results and be able to grok the problem
- - [ ] Write files that automate the modeling process and export results to a particular folder
+ - [x] Create starter notebooks with sample code for other people to visually explore the results and be able to grok the problem
+ - [x] Write files that automate the modeling process and export results to a particular folder
  - [ ] Look at the results!  This is the most important part.  Look at the evals and parse what the results tell us.
 
 # Current Questions ❔
@@ -54,3 +54,17 @@ First navigate into the root directory of the repo with this line:
 If you then want to activate that environment you can do so with the command:
 
 `conda activate time_series_ensembles`
+
+### Creating Results
+
+To recreate results for a particular experiment with a particular dataset, navigate to the root folder of this repo and run the following command:  `python -m src.experiment "experiment name" "dataset name"`
+
+An example of this command would be: `python -m src.experiment "linear regression detrended demeaned" "car_parts"`
+
+The current list of datasets and experiments that have been conducted are listed below:
+
+| Dataset   | Experiment Name                      |
+---------------------------------------------------
+| car_parts | linear regression detrended demeaned |
+
+Other arguments can be found in the `experiment.py` file to specify experiment parameters, if you wish.

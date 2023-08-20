@@ -7,3 +7,9 @@ dependencies:
   - matplotlib
   - pandas
   - scikit-learn
+  - plotly
+  - sktime
+  - statsmodels
+  - jupyter
+  - tqdm
+  - kaleido
