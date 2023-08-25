@@ -1,5 +1,6 @@
 name: time_series_ensembles
 channels:
+  - conda-forge
   - defaults
 dependencies:
   - python>=3.9
@@ -12,4 +13,4 @@ dependencies:
   - statsmodels
   - jupyter
   - tqdm
-  - kaleido
+  - python-kaleido
