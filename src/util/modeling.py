@@ -114,7 +114,7 @@ def extract_hierarchical_train_test_preds(results_df: pd.DataFrame) -> pd.DataFr
         results.append(tmp_totals)
         
     # convert into a final dataframe
-    return pd.concat(results).reset_index()
+    return pd.concat(results)
 
 def get_valid_filename(file_name: str) -> str:
     """Transforms a string into a valid filename"""
@@ -137,6 +137,7 @@ def calculate_metrics(y_true, y_preds, round_vals = False) -> dict:
 
     if round_vals:
         y_preds = y_preds.round()
+        y_preds = np.where(y_preds < 0, 0, y_preds)
            
     results =  {
         'mape': mean_absolute_percentage_error(y_true, y_preds),
@@ -245,7 +246,7 @@ def run_experiment(name: str,
     # this will take awhile to run -- maybe 1 - 3 hrs
     # this df will contain a column of predictions for each lookback window size
     lookback_preds = build_lookback_predictions(model, 
-                                                df[:204], 
+                                                df, 
                                                 splitter = splitter,
                                                 max_window_length = max_window_length,
                                                 hierarchical = hierarchical)
@@ -259,10 +260,14 @@ def run_experiment(name: str,
     metric_results = calc_metrics_for_preds_df(ensemble_preds, round_vals = round_vals)
 
     # graphs to demonstrate the results
-    fig1 = px.line(x = range(2, max_window_length), y = metric_results.loc[max_window_length-1:, 'mae'], title = 'MAE vs # of Window Ensembles')
-    fig1.update_layout(xaxis_title = '# of Window Ensembles', yaxis_title = 'MAE')
+    fig1 = px.line(x = range(2, max_window_length), y = metric_results.loc[max_window_length-1:, 'mae'], 
+                   title = 'MAE vs # of Window Ensembles')
+    fig1.update_layout(xaxis_title = '# of Window Ensembles', 
+                       yaxis_title = 'MAE')
     
-    fig2 = px.line(x = range(2, max_window_length), y = metric_results.loc[max_window_length-1:, 'rmse'], title = 'RMSE vs # of Window Ensembles')
+    fig2 = px.line(x = range(2, max_window_length), 
+                   y = metric_results.loc[max_window_length-1:, 'rmse'], 
+                   title = 'RMSE vs # of Window Ensembles')
     fig2.update_layout(xaxis_title = '# of Window Ensembles', yaxis_title = 'RMSE')
     
     print("Getting ready to export results to folder........")
@@ -286,10 +291,10 @@ def run_experiment(name: str,
     
     lookback_preds_path = os.path.join(dir_name, 'lookback_preds.csv')
     
-    lookback_preds.to_csv(lookback_preds_path, index = False)
+    lookback_preds.to_csv(lookback_preds_path, index = True if hierarchical else False)
     
     ensemble_preds_path = os.path.join(dir_name, 'ensemble_preds.csv')
-    ensemble_preds.to_csv(ensemble_preds_path, index = False)
+    ensemble_preds.to_csv(ensemble_preds_path, index = True if hierarchical else False)
     
     metric_results_path = os.path.join(dir_name, 'metric_results.csv')
     metric_results.to_csv(metric_results_path, index = False)

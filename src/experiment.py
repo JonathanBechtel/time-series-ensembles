@@ -6,6 +6,7 @@ from src.util.modeling import run_experiment
 from sklearn.linear_model import LinearRegression
 from sktime.forecasting.compose import make_reduction, TransformedTargetForecaster
 from sktime.transformations.series.detrend import Detrender, Deseasonalizer
+from sktime.transformations.series.difference import Differencer
 from sktime.forecasting.model_selection import ExpandingWindowSplitter
 
 warnings.filterwarnings("ignore")
@@ -57,3 +58,21 @@ if __name__ == '__main__':
                         max_window_length = args.max_window_length,
                         data_file = 'car_parts_final.csv',
                         output_dir = args.output_dir)
+            
+        elif args.experiment_name == 'linear regression differenced':
+
+            model = TransformedTargetForecaster(
+                    [ Differencer(lags = 1), 
+                     make_reduction(LinearRegression(), 
+                                     window_length = 1, 
+                                     strategy = 'recursive')])
+            
+            splitter = ExpandingWindowSplitter(step_length=1, fh=[1], initial_window=25)
+            run_experiment(model = model,
+                           splitter = splitter,
+                           name = args.experiment_name, 
+                           hierarchical = args.hierarchical,
+                           round_vals = args.round_vals,
+                           max_window_length = args.max_window_length,
+                           data_file = 'car_parts_final.csv',
+                           output_dir = args.output_dir)
