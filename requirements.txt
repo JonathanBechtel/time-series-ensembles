@@ -8,3 +8,4 @@ statsmodels
 jupyter
 tqdm
 kaleido
+category_encoders
