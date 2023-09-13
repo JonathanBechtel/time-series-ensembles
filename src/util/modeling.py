@@ -11,7 +11,31 @@ from sklearn.metrics import mean_absolute_percentage_error, mean_absolute_error,
 from tqdm import tqdm
 from sktime.forecasting.model_evaluation import evaluate
 
+from statsmodels.stats.diagnostic import acorr_ljungbox
+
 warnings.filterwarnings('ignore')
+
+def check_residuals(series):
+    """Function to get test stats for model residuals for each time series"""
+    return pd.DataFrame([acorr_ljungbox(series[col])['lb_pvalue'] for col in series.columns])
+
+def generate_residuals_reports(errors_df:  pd.DataFrame, 
+                               hierarchical = False,
+                               threshold = .05) -> pd.DataFrame:
+    """Generate data about model residuals after fitting data -- runs a box-ljung test
+    on each time series to test for auto correlation on up to 10 lags"""
+    
+    if hierarchical:
+        test_results = errors_df.groupby(level = 0).apply(check_residuals)
+        correlated   = test_results < threshold
+        correlated   = correlated.groupby(level = 0).mean()
+        
+    else:
+        test_results = errors_df.apply(check_residuals)
+        correlated   = test_results < threshold
+        correlated   = correlated.mean()
+        
+    return correlated
 
 def build_lookback_predictions(forecaster, 
                                data, 
@@ -42,7 +66,11 @@ def build_lookback_predictions(forecaster,
         # change the lookback window to the appropriate number
         # IMPORTANT -- Assumes you have a TransformedTargetForecaster via sktime for this step
         # if you don't, will need to adjust to something else
-        forecaster.set_params(TransformedTargetForecaster__RecursiveTabularRegressionForecaster__window_length = i)
+
+        # check if the forecasting pipeline has window_length as a parameter
+        mod_params = forecaster.get_params().keys()
+        if 'TransformedTargetForecaster__RecursiveTabularRegressionForecaster__window_length' in mod_params:
+            forecaster.set_params(TransformedTargetForecaster__RecursiveTabularRegressionForecaster__window_length = i)
         
         # get out-of-sample results for each window length
         tmp_results = evaluate(forecaster, y = data, cv = splitter, strategy = 'refit', return_data = True)
@@ -246,7 +274,7 @@ def run_experiment(name: str,
     # this will take awhile to run -- maybe 1 - 3 hrs
     # this df will contain a column of predictions for each lookback window size
     lookback_preds = build_lookback_predictions(model, 
-                                                df, 
+                                                df[:510], 
                                                 splitter = splitter,
                                                 max_window_length = max_window_length,
                                                 hierarchical = hierarchical)
@@ -255,19 +283,39 @@ def run_experiment(name: str,
     # ie, if total lookbacks is 9, will ensemble predictions from 2, 3, 4
     # 5, etc lookbacks
     ensemble_preds = calc_ensembled_predictions(lookback_preds)
+
+    # generate errors for each ensemble
+    ensemble_errors = ensemble_preds.apply(lambda x: x - ensemble_preds['y_true'])
+
+    # generate reports on the residuals
+    print("Generating residual reports")
+    residual_reports = generate_residuals_reports(ensemble_errors, hierarchical = hierarchical)
+
+    print("Calculating metrics for each ensemble")
+
     
     # calculate the metrics for each of the ensemble values
     metric_results = calc_metrics_for_preds_df(ensemble_preds, round_vals = round_vals)
 
     # graphs to demonstrate the results
-    fig1 = px.line(x = range(2, max_window_length), y = metric_results.loc[max_window_length-1:, 'mae'], 
+
+    # done to handle index lengths for graphs
+    if max_window_length == 2:
+        range_start = 1
+    else:
+        range_start = 2
+
+
+    fig1 = px.line(x = range(range_start, max_window_length), 
+                   y = metric_results.loc[max_window_length-1:, 'mae'], 
                    title = 'MAE vs # of Window Ensembles')
     fig1.update_layout(xaxis_title = '# of Window Ensembles', 
                        yaxis_title = 'MAE')
     
-    fig2 = px.line(x = range(2, max_window_length), 
+    fig2 = px.line(x = range(range_start, max_window_length), 
                    y = metric_results.loc[max_window_length-1:, 'rmse'], 
                    title = 'RMSE vs # of Window Ensembles')
+    
     fig2.update_layout(xaxis_title = '# of Window Ensembles', yaxis_title = 'RMSE')
     
     print("Getting ready to export results to folder........")
@@ -298,5 +346,11 @@ def run_experiment(name: str,
     
     metric_results_path = os.path.join(dir_name, 'metric_results.csv')
     metric_results.to_csv(metric_results_path, index = False)
+
+    residual_reports_path = os.path.join(dir_name, 'residual_reports.csv')
+    residual_reports.to_csv(residual_reports_path, index = True if hierarchical else False)
+
+    ensemble_errors_path = os.path.join(dir_name, 'ensemble_errors.csv')
+    ensemble_errors.to_csv(ensemble_errors_path, index = True if hierarchical else False)
     
     print("Finished.")

@@ -8,6 +8,9 @@ from sktime.forecasting.compose import make_reduction, TransformedTargetForecast
 from sktime.transformations.series.detrend import Detrender, Deseasonalizer
 from sktime.transformations.series.difference import Differencer
 from sktime.forecasting.model_selection import ExpandingWindowSplitter
+from sktime.forecasting.naive import NaiveForecaster
+
+from statsmodels.stats.diagnostic import acorr_ljungbox
 
 warnings.filterwarnings("ignore")
 
@@ -62,7 +65,7 @@ if __name__ == '__main__':
         elif args.experiment_name == 'linear regression differenced':
 
             model = TransformedTargetForecaster(
-                    [ Differencer(lags = 1), 
+                    [ Differencer(lags = 1) *
                      make_reduction(LinearRegression(), 
                                      window_length = 1, 
                                      strategy = 'recursive')])
@@ -76,3 +79,20 @@ if __name__ == '__main__':
                            max_window_length = args.max_window_length,
                            data_file = 'car_parts_final.csv',
                            output_dir = args.output_dir)
+            
+        elif args.experiment_name == 'naive':
+            model = TransformedTargetForecaster(
+                [Differencer(lags = 1) * NaiveForecaster(strategy = 'last')]
+                )
+            
+            splitter = ExpandingWindowSplitter(step_length=1, fh=[1], initial_window=25)
+            run_experiment(model = model,
+                            splitter = splitter,
+                            name = args.experiment_name, 
+                            hierarchical = args.hierarchical,
+                            round_vals = args.round_vals,
+
+                            # for naive this should just be set to 1
+                            max_window_length = args.max_window_length,
+                            data_file = 'car_parts_final.csv',
+                            output_dir = args.output_dir)
