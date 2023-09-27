@@ -4,9 +4,6 @@ from src.util.ml_experiment import MLForecastingExperiment
 from sklearn.linear_model import Ridge, Lasso
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.ensemble import RandomForestRegressor
-#from xgboost import XGBRegressor
-#from lightgbm import LGBMRegressor
-#from sklearn.svm import SVR
 
 # models to run for each experiment
 model_list = [

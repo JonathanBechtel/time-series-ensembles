@@ -328,26 +328,3 @@ class MLForecastingExperiment():
                 results.to_csv(f'{self.path_to_create}/{model}_preds.csv', index = False)
                 metrics.to_csv(f'{self.path_to_create}/{model}_metrics.csv', 
                                index = False)
-
-"""
-if __name__ == '__main__':
-
-    # run experiment
-    experiment = MLForecastingExperiment(data_file = 'weekly_electricity_demand_final.csv',
-                                         exp_name = 'initial_run',
-                                         target_transform = 'log_diff',
-
-                                         models = [Ridge(alpha = 1.0), 
-                                                   Lasso(alpha = 0.1), 
-                                                   KNeighborsRegressor(n_neighbors = 5)])  
-    experiment.run()                      
-"""
-
-
-
-
-
-
-    
-
-    
