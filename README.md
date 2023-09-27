@@ -82,13 +82,21 @@ We'll cover the basic setup of this project's workflow with the following steps:
  - Fitting Routine
  - Evaluation
 
-## Data (In Progress)
+## Data
 
-The datasets we'll be using for this project are listed in the following table.  Each one is listed with some of its basic attributes.  Each of these is a panel dataset
+The datasets we'll be using for this project are listed in the following table.  Each one is listed with some of its basic attributes.  Each of these is a panel dataset, with multiple observations for each entity inside the dataset
 
-| Dataset      | # Entities  | # Rows | Description                               |
-| ------------ | ----------- | ------ | ----------------------------------------- |
-| covid deaths | 266         | 894    | daily covid deaths for different entities |
+| Dataset      | # Entities  | # Rows | Description                               | **Frequency** |
+| ------------ | ----------- | ------ | ----------------------------------------- | ------------- |
+| covid deaths | 266         | 56392  | daily covid deaths for different entities | Daily         |
+| fred         | 107         | 77896  | economic time series collected from FRED  | Monthly       |
+| traffic      | 862         | 89648  | traffic counts across cities              | Weekly        |
+| tourism      | 366         | 109280 | tourist visits across cities              | Monthly       |
+| m3           | 1428        | 167562 | monthly sales for m3 competition          | Monthly       |
+| m1           | 617         | 55998  | monthly sales for m1 competition          | Monthly       |
+| hospital     | 767         | 64428  | visits to different hospitals             | Monthly       |
+| m4           | 414         | 373372 | hourly sales for m4 competition           | Hourly        |
+| electricity  | 321         | 47508  | electricity usage for 321 households      | Weekly        |
 
 ## Choice of Models
 
