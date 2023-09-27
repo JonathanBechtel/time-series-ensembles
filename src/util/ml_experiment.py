@@ -16,6 +16,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.linear_model import Ridge, Lasso
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score, mean_absolute_percentage_error
 
 # category encoders
 from category_encoders import OneHotEncoder, TargetEncoder
@@ -24,17 +25,20 @@ class MLForecastingExperiment():
 
     def __init__(self, 
                  data_file: str, 
+                 exp_name: str,
                  models: list, 
                  target_transform: str, 
                  lags: list = [1, 2, 3, 7],
-                 calibration_windows: list = [7, 14, 28],
+                 calibration_windows: list = [7, 14],
                  encode_entity: bool = True,
                  train_size: int = 120,
+
                  # list of date parts to encode for date features
                  date_parts_to_encode: list = ['month'],
                  window_transforms: dict = None):
 
         self.data_file = data_file
+        self.exp_name = exp_name
         self.models    = models
         self.target_transform = target_transform
         self.lags = lags
@@ -114,7 +118,7 @@ class MLForecastingExperiment():
 
         # create X based off of lags
         for lag in self.lags:
-            self.data[f'lag_{lag}'] = self.data.groupby(level = 0)['value'].shift(lag)
+            self.data[f'lag_{lag}'] = self.data.groupby(level = 0)['value'].shift(lag).values
 
         # create X based off of window transforms
         if self.window_transforms is not None:
@@ -128,6 +132,46 @@ class MLForecastingExperiment():
 
         # drop rows with missing values
         self.data.dropna(inplace = True)
+
+    def _calc_naive_forecast(self):
+        """Creates a Naive Baseline for the Dataset"""
+        self.data['naive_forecast'] = self.data.groupby(level = 0)['value'].shift(1).values
+
+    def _calculate_error_metrics(self, preds_df: pd.DataFrame) -> pd.DataFrame:
+        """Calculate error metrics for each model"""
+
+        # drop rows with missing values in the predictions
+        preds_df = preds_df.dropna()
+
+        pred_cols = [col for col in preds_df if 'pred' in col]
+
+        # store the results
+        results = []
+        for col in pred_cols:
+            results.append({
+                'model': col,
+                'mae': mean_absolute_error(preds_df['y_true'], preds_df[col]),
+                'rmse': mean_squared_error(preds_df['y_true'], preds_df[col], squared = False),
+                'mape': mean_absolute_percentage_error(preds_df['y_true'], preds_df[col]),
+                'r2': r2_score(preds_df['y_true'], preds_df[col])
+            })
+
+        # calculate the naive forecast error metrics
+        naive_dates = self.data.index.get_level_values(1)
+        mask = naive_dates.isin(preds_df['date'])
+        naive_preds = self.data.loc[mask, 'naive_forecast'].values
+        naive_y_true = self.data.loc[mask, 'value'].values
+
+        results.append({
+            'model': 'naive_forecast',
+            'mae': mean_absolute_error(naive_y_true, naive_preds),
+            'rmse': mean_squared_error(naive_y_true, naive_preds, squared = False),
+            'mape': mean_absolute_percentage_error(naive_y_true, naive_preds),
+            'r2': r2_score(naive_y_true, naive_preds)
+        })
+
+        # return results as a dataframe
+        return pd.DataFrame(results)
 
     def _add_date_features(self):
         """Create date features based off of date_parts_to_encode"""
@@ -180,7 +224,7 @@ class MLForecastingExperiment():
         self.y_train, self.y_test = train['value'], test['value']
 
     def _fit_data(self, encoder, model):
-
+        """Fit data using sliding window one step ahead forecasting"""
         # store the results for each training window
         final_window_results = []
 
@@ -210,25 +254,58 @@ class MLForecastingExperiment():
 
                 # store the results
                 window_results.append(pd.DataFrame({
-                                                    'date': self.X_train.iloc[val_idx].index.get_level_values(1),
-                                                    'series': self.X_train.iloc[val_idx].index.get_level_values(0),
-                                                    f'y_pred_{window}': y_pred, 
-                                                    'y_true': self.y_train.iloc[val_idx]
+                                                    'date': X_val_temp.index.get_level_values(2),
+                                                    'series': X_val_temp.index.get_level_values(1),
+                                                    'y_pred': y_pred, 
+                                                    'y_true': self.y_train.iloc[val_idx].values
                                                     }))
                 
             # concatenate the results
-            window_results = pd.concat(window_results, axis = 0)
-            final_window_results.append(window_results)
+            window_results_df = pd.concat(window_results)
+            window_results_df['window'] = window
+            final_window_results.append(window_results_df)
                 
         # format the results from each window
-        final_window_results = pd.concat(final_window_results, axis = 0)
-        return final_window_results
+        final_exp_results = pd.concat(final_window_results, axis = 0)
+
+        # format the results so they are easier to read
+        pivoted_results = final_exp_results.pivot_table(
+            index = ['series', 'date'], 
+            columns = 'window')
+        
+        # flatten the column names
+        pivoted_results.columns = [f'{col[0]}_{col[1]}' 
+                                   for col in pivoted_results.columns]
+        true_cols       = [col for col in pivoted_results if 'true' in col]
+        pivoted_results = pivoted_results.drop(true_cols[1:], axis = 1)
+        pivoted_results.rename({
+            true_cols[0]: 'y_true'
+            }, axis = 1, inplace = True)
+        
+        # reset the index
+        pivoted_results.reset_index(inplace = True)
+
+        return pivoted_results
+    
+    def _create_results_directory(self):
+        """Create directory to save results for this dataset
+        """
+        dataset_name = self.data_file.split('.')[0]
+        self.path_to_create = os.path.abspath(f'results/{dataset_name}_{self.exp_name}')
+        os.makedirs(self.path_to_create, exist_ok = True)
+
 
     def run(self):
             """Function to run experiment with all available models"""
 
             # load data
             self._load_data()
+
+            # create directory to save the results
+            self._create_results_directory()
+
+            # create naive forecast
+            self._calc_naive_forecast()
 
             # transform target
             self._transform_target()
@@ -239,33 +316,32 @@ class MLForecastingExperiment():
             # create data encoder
             self._build_data_encoder()
 
+            experiment_results = []
+
             # fit data
             for model in self.models:
                 print(f"Fitting model for {model}")
                 results = self._fit_data(self.data_encoder, model)
+                metrics = self._calculate_error_metrics(results)
 
-                results['model'] = model
+                # save results
+                results.to_csv(f'{self.path_to_create}/{model}_preds.csv', index = False)
+                metrics.to_csv(f'{self.path_to_create}/{model}_metrics.csv', 
+                               index = False)
 
-                # create directory to save the results
-                current_time = datetime.now().strftime("%Y%m%d-%H%M%S")
-                dataset_name = self.data_file.split('.')[0]
-                path_to_create = os.path.abspath(f'results/{dataset_name}')
-                print(path_to_create)
-                os.makedirs(path_to_create, exist_ok = True)
-                results.to_csv(f'{path_to_create}/{model}_{current_time}.csv')
-
+"""
 if __name__ == '__main__':
 
     # run experiment
     experiment = MLForecastingExperiment(data_file = 'weekly_electricity_demand_final.csv',
+                                         exp_name = 'initial_run',
                                          target_transform = 'log_diff',
+
                                          models = [Ridge(alpha = 1.0), 
                                                    Lasso(alpha = 0.1), 
-                                                   KNeighborsRegressor(n_neighbors = 5),
-                                                   RandomForestRegressor(n_estimators = 100, 
-                                                                         min_samples_leaf = 5,
-                                                                         max_features = 0.8)])  
-    experiment.run()                                      
+                                                   KNeighborsRegressor(n_neighbors = 5)])  
+    experiment.run()                      
+"""
 
 
 
