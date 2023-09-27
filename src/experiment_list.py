@@ -14,7 +14,7 @@ model_list = [
 
 electricity_standard = MLForecastingExperiment(
     exp_name = 'electricity_initial',
-    data_file = 'weekly_electricity_demand_final.csv',
+    data_file = 'electricity_weekly.csv',
     models = model_list,
     lags = [1, 2, 3, 4, 5, 6, 7],
     calibration_windows = [7, 14, 28, 60],
