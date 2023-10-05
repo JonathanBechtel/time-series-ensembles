@@ -23,3 +23,5 @@ electricity_standard = MLForecastingExperiment(
     encode_entity = True,
     train_size = 125,
 )
+
+electricity_standard.run()
