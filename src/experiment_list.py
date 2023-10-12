@@ -24,4 +24,99 @@ electricity_standard = MLForecastingExperiment(
     train_size = 125,
 )
 
-electricity_standard.run()
+covid_standard = MLForecastingExperiment(
+    exp_name = 'covid_deaths_initial',
+    data_file = 'covid_deaths_daily.csv',
+    models = model_list,
+    lags = [1, 2, 3, 4, 5, 6, 7],
+    calibration_windows = [7, 30, 60, 120],
+    date_parts_to_encode = ['dayofweek', 'quarter'],
+    target_transform = 'log_diff',
+    encode_entity = True,
+    train_size = 160
+)
+
+fred_standard = MLForecastingExperiment(
+    exp_name = 'fred_initial',
+    data_file = 'fred_monthly.csv',
+    models = model_list,
+    lags = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    calibration_windows = [12, 36, 72, 144],
+    date_parts_to_encode = ['month', 'quarter'],
+    target_transform = 'diff',
+    encode_entity = True,
+    train_size = 500,
+)
+
+traffic_standard = MLForecastingExperiment(
+    exp_name = 'traffic_initial',
+    data_file = 'traffic_monthly.csv',
+    models = model_list,
+    lags = [1, 2, 3, 4],
+    calibration_windows = [3, 12, 36],
+    date_parts_to_encode = ['dayofweek', 'quarter', 'month'],
+    target_transform = 'log_diff',
+    encode_entity = True,
+    train_size = 80,
+)
+
+hospital_standard = MLForecastingExperiment(
+    exp_name = 'hospital_initial',
+    data_file = 'hospital_monthly.csv',
+    models = model_list,
+    lags = [1, 2, 3, 4],
+    calibration_windows = [3, 12, 24],
+    date_parts_to_encode = ['month', 'quarter'],
+    target_transform = 'log_diff',
+    encode_entity = True,
+    train_size = 65,
+)
+
+tourism_standard = MLForecastingExperiment(
+    exp_name = 'tourism_initial',
+    data_file = 'tourism_monthly.csv',
+    models = model_list,
+    lags = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    calibration_windows = [12, 24, 48, 96],
+    date_parts_to_encode = ['month', 'quarter'],
+    target_transform = 'log_diff',
+    encode_entity = True,
+    train_size = 240,
+)
+
+m1_standard = MLForecastingExperiment(
+    exp_name = 'm1_initial',
+    data_file = 'm1_monthly.csv',
+    models = model_list,
+    lags = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    calibration_windows = [3, 24, 30],
+    date_parts_to_encode = ['month', 'quarter'],
+    target_transform = 'log_diff',
+    encode_entity = True,
+    train_size = 74,
+)
+
+m3_standard = MLForecastingExperiment(
+    exp_name = 'm3_initial',
+    data_file = 'm3_monthly.csv',
+    models = model_list,
+    lags = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    calibration_windows = [3, 24, 30],
+    date_parts_to_encode = ['month', 'quarter'],
+    target_transform = 'log_diff',
+    encode_entity = True,
+    train_size = 74
+)
+
+m4_standard = MLForecastingExperiment(
+    exp_name = 'm4_initial',
+    data_file = 'm4_hourly.csv',
+    models = model_list,
+    lags = list(range(1, 25)),
+    calibration_windows = [3, 24, 30],
+    date_parts_to_encode = ['hour'],
+    target_transform = 'log_diff',
+    encode_entity = True,
+    train_size = 700
+)
+

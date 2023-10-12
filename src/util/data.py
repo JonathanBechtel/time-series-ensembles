@@ -1,5 +1,7 @@
 from datetime import datetime
 from distutils.util import strtobool
+from statsmodels.tsa.stattools import adfuller
+
 from typing import Union
 import pandas as pd
 import numpy as np
@@ -171,3 +173,21 @@ def convert_tsf_to_dataframe(
             contain_missing_values,
             contain_equal_length,
         )
+    
+def check_dataset_stationarity(df: pd.DataFrame, col_name = 'target') -> pd.DataFrame:
+    """Function to check what portion of a dataset is stationary
+
+    Args:
+        df (pd.DataFrame): input data for time series modeling
+
+    Returns:
+        pd.DataFrame: Dataframe with results of adfuller test for 
+        each time series in the input dataframe
+    """
+    df = df.dropna()
+    return df.groupby(level = 0)[col_name].apply(check_stationarity)
+
+def check_stationarity(series):
+    """Run ADF Test on a Time series and check for stationarity"""
+    
+    return adfuller(series, regression = 'c')[1]

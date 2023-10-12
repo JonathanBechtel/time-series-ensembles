@@ -13,9 +13,5 @@ dependencies:
   - statsmodels
   - jupyter
   - tqdm
-<<<<<<< HEAD
-  - python-kaleido
-=======
   - kaleido
   - category_encoders
->>>>>>> 0d494b1 (added new notebook for using window lengths)

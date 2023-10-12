@@ -21,32 +21,14 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score, m
 # category encoders
 from category_encoders import OneHotEncoder, TargetEncoder
 
-class MLForecastingExperiment():
+class _BaseExperimentClass():
+    """Base Class for a Forecasting Experiment, to be inherited for ML, Stats, and DL Experiments"""
 
-    def __init__(self, 
-                 data_file: str, 
-                 exp_name: str,
-                 models: list, 
-                 target_transform: str, 
-                 lags: list = [1, 2, 3, 7],
-                 calibration_windows: list = [7, 14],
-                 encode_entity: bool = True,
-                 train_size: int = 120,
-
-                 # list of date parts to encode for date features
-                 date_parts_to_encode: list = ['month'],
-                 window_transforms: dict = None):
-
+    def __init__(self, data_file: str, exp_name: str, models: list, train_size: int):
         self.data_file = data_file
         self.exp_name = exp_name
-        self.models    = models
-        self.target_transform = target_transform
-        self.lags = lags
-        self.calibration_windows = calibration_windows
-        self.window_transforms = window_transforms
-        self.encode_entity = encode_entity
+        self.models = models
         self.train_size = train_size
-        self.date_parts_to_encode = date_parts_to_encode
 
     def _load_data(self):
         """Load in dataset"""
@@ -86,52 +68,22 @@ class MLForecastingExperiment():
         assert self.data['date'].dtype == 'datetime64[ns]', 'Date column must be of type datetime64[ns]'
         assert self.data['value'].dtype in ['float64', 'int64'], 'Value column must be of type float64 or int64'
 
-    def _transform_target(self):
-        """Apply target transformation to data"""
+    def _create_X_y(self):
+        """Needs to be modified for each experiment class"""
+        pass
 
-        # difference target
-        if self.target_transform == 'diff':
-            self.data['value'] = self.data.groupby(level = 0)['value'].diff()
+    def _create_train_and_test(self):
+        """Create training and test sets for X & y"""
 
-        # log transform target
-        elif self.target_transform == 'log':
-            self.data['value'] = self.data.groupby(level = 0)['value'].apply(np.log1p)
+        # create training and test sets
+        grouping = self.data.groupby(level = 0)
+        train, test = grouping.apply(lambda x: x.iloc[:self.train_size]), grouping.apply(lambda x: x.iloc[self.train_size:])
 
-        # log difference target
-        elif self.target_transform == 'log_diff':
-            self.data['value'] = self.data.groupby(level = 0)['value'].apply(np.log1p).diff().values
+        train = train.dropna()
+        test  = test.dropna()
 
-        # no transformation
-        elif self.target_transform == None:
-            pass
-
-    def _create_window_transforms(self):
-        """Create window transforms based off of time based features in target"""
-
-        for transform in self.window_transforms.keys():
-            if hasattr(self.data['value'].rolling(0), transform):
-                for window in self.window_transforms[transform]:
-                    self.data[f'{transform}_{window}'] = self.data.groupby(level = 0)['value'].rolling(window).apply(getattr(self.data['value'].rolling(window), transform)).shift().values
-
-    def _create_X(self):
-        """Create X based off of time based features in target"""
-
-        # create X based off of lags
-        for lag in self.lags:
-            self.data[f'lag_{lag}'] = self.data.groupby(level = 0)['value'].shift(lag).values
-
-        # create X based off of window transforms
-        if self.window_transforms is not None:
-            self._create_window_transforms()
-
-        if self.encode_entity:
-            self.data['entity'] = self.data.index.get_level_values(0)
-
-        if self.date_parts_to_encode is not None:
-            self._add_date_features()
-
-        # drop rows with missing values
-        self.data.dropna(inplace = True)
+        self.X_train, self.X_test = train.drop(columns = ['target', 'value', 'naive_forecast']), test.drop(columns = ['target', 'value', 'naive_forecast']) 
+        self.y_train, self.y_test = train['target'], test['target']
 
     def _calc_naive_forecast(self):
         """Creates a Naive Baseline for the Dataset"""
@@ -172,31 +124,96 @@ class MLForecastingExperiment():
 
         # return results as a dataframe
         return pd.DataFrame(results)
-
-    def _add_date_features(self):
-        """Create date features based off of date_parts_to_encode"""
-
-        # create date features, sugglested list of date parts to encode: 
-        # ['year', 'month', 'day', 'dayofweek', 'dayofyear', 'weekofyear']
-        # only use ones that are appropriate for your data
-        # for more information on other date parts see: https://pandas.pydata.org/docs/user_guide/timeseries.html#time-date-components
-        for date_part in self.date_parts_to_encode:
-            if hasattr(self.data.index.get_level_values(1), date_part):
-                self.data[date_part] = getattr(self.data.index.get_level_values(1), date_part)
-
-    def _build_data_encoder(self):
-        """Create data transformer based off of presence of different columns
-        
-        Standard data encoding scheme is as follows:
-            date parts are one-hot encoded
-            entity is target encoded
+    
+    def _create_results_directory(self):
+        """Create directory to save results for this dataset
         """
-        # create data encoder
-        self.data_encoder = make_pipeline(
-            OneHotEncoder(cols = self.date_parts_to_encode, use_cat_names = True))
-        
+        dataset_name = self.data_file.split('.')[0]
+        self.path_to_create = os.path.abspath(f'results/{dataset_name}_{self.exp_name}')
+        os.makedirs(self.path_to_create, exist_ok = True)
+
+    def run(self):
+        """To be modified for each experiment class"""
+        pass
+
+    def _fit_data(self):
+        """To be modified for each experiment class"""
+        pass
+
+class MLForecastingExperiment(_BaseExperimentClass):
+
+    def __init__(self, 
+                 data_file: str, 
+                 exp_name: str,
+                 models: list, 
+                 target_transform: str, 
+                 lags: list = [1, 2, 3, 7],
+                 calibration_windows: list = [7, 14],
+                 encode_entity: bool = True,
+                 train_size: int = 120,
+
+                 # list of date parts to encode for date features
+                 date_parts_to_encode: list = ['month'],
+                 window_transforms: dict = None):
+
+        # inherit from ForecastingExperiment
+        super().__init__(data_file, exp_name, models, train_size)
+
+        # arguments specific to MLForecastingExperiment
+        self.target_transform = target_transform
+        self.lags = lags
+        self.calibration_windows = calibration_windows
+        self.window_transforms = window_transforms
+        self.encode_entity = encode_entity
+        self.date_parts_to_encode = date_parts_to_encode
+
+    def _transform_target(self):
+        """Apply target transformation to data"""
+
+        # difference target
+        if self.target_transform == 'diff':
+            self.data['target'] = self.data.groupby(level = 0)['value'].diff()
+
+        # log transform target
+        elif self.target_transform == 'log':
+            self.data['target'] = self.data.groupby(level = 0)['value'].apply(np.log1p)
+
+        # log difference target
+        elif self.target_transform == 'log_diff':
+            self.data['target'] = self.data.groupby(level = 0)['value'].apply(np.log1p).diff().values
+
+        # no transformation
+        elif self.target_transform == None:
+            pass
+
+    def _create_window_transforms(self):
+        """Create window transforms based off of time based features in target"""
+
+        for transform in self.window_transforms.keys():
+            if hasattr(self.data['value'].rolling(0), transform):
+                for window in self.window_transforms[transform]:
+                    self.data[f'{transform}_{window}'] = getattr(self.data.groupby(level = 0)['target'].rolling(window), transform)().values
+                    self.data[f'{transform}_{window}'] = self.data.groupby(level = 0)[f'{transform}_{window}'].shift().values
+
+    def _create_X(self):
+        """Create X based off of time based features in target"""
+
+        # create X based off of lags
+        for lag in self.lags:
+            self.data[f'lag_{lag}'] = self.data.groupby(level = 0)['target'].shift(lag).values
+
+        # create X based off of window transforms
+        if self.window_transforms is not None:
+            self._create_window_transforms()
+
         if self.encode_entity:
-            self.data_encoder.steps.append(('target_encoder', TargetEncoder(cols = ['entity'])))
+            self.data['entity'] = self.data.index.get_level_values(0)
+
+        if self.date_parts_to_encode is not None:
+            self._add_date_features()
+
+        # drop rows with missing values
+        self.data.dropna(inplace = True)
 
     def _create_X_y(self):
         """Create X and y for whole dataset"""
@@ -204,27 +221,12 @@ class MLForecastingExperiment():
         # create X
         self._create_X()
 
-        # create y
-        self.y = self.data['value']
-
-        # drop target from X
-        self.X = self.data.drop(columns = ['value'])
-
         # create train and test
         self._create_train_and_test()
 
-    def _create_train_and_test(self):
-        """Create training and test sets for X & y"""
-
-        # create training and test sets
-        grouping = self.data.groupby(level = 0)
-        train, test = grouping.apply(lambda x: x.iloc[:self.train_size]), grouping.apply(lambda x: x.iloc[self.train_size:])
-
-        self.X_train, self.X_test = train.drop(columns = ['value']), test.drop(columns = ['value']) 
-        self.y_train, self.y_test = train['value'], test['value']
-
     def _fit_data(self, encoder, model):
         """Fit data using sliding window one step ahead forecasting"""
+
         # store the results for each training window
         final_window_results = []
 
@@ -287,44 +289,68 @@ class MLForecastingExperiment():
 
         return pivoted_results
     
-    def _create_results_directory(self):
-        """Create directory to save results for this dataset
-        """
-        dataset_name = self.data_file.split('.')[0]
-        self.path_to_create = os.path.abspath(f'results/{dataset_name}_{self.exp_name}')
-        os.makedirs(self.path_to_create, exist_ok = True)
-
-
     def run(self):
-            """Function to run experiment with all available models"""
+        """Function to run experiment with all available models"""
 
-            # load data
-            self._load_data()
+        # load data
+        self._load_data()
 
-            # create directory to save the results
-            self._create_results_directory()
+        # create directory to save the results
+        self._create_results_directory()
 
-            # create naive forecast
-            self._calc_naive_forecast()
+        # create naive forecast
+        self._calc_naive_forecast()
 
-            # transform target
-            self._transform_target()
+        # transform target
+        self._transform_target()
 
-            # create X and y
-            self._create_X_y()
+        # create X and y
+        self._create_X_y()
 
-            # create data encoder
-            self._build_data_encoder()
+        # create data encoder
+        self._build_data_encoder()
 
-            experiment_results = []
+        experiment_results = []
 
-            # fit data
-            for model in self.models:
-                print(f"Fitting model for {model}")
-                results = self._fit_data(self.data_encoder, model)
-                metrics = self._calculate_error_metrics(results)
+        # fit data
+        for model in self.models:
+            print(f"Fitting model for {model}")
+            results = self._fit_data(self.data_encoder, model)
+            metrics = self._calculate_error_metrics(results)
 
-                # save results
-                results.to_csv(f'{self.path_to_create}/{model}_preds.csv', index = False)
-                metrics.to_csv(f'{self.path_to_create}/{model}_metrics.csv', 
-                               index = False)
+            # save results
+            results.to_csv(f'{self.path_to_create}/{model}_preds.csv', index = False)
+            metrics.to_csv(f'{self.path_to_create}/{model}_metrics.csv', 
+                            index = False)
+    
+
+
+    def _add_date_features(self):
+        """Create date features based off of date_parts_to_encode"""
+
+        # create date features, sugglested list of date parts to encode: 
+        # ['year', 'month', 'day', 'dayofweek', 'dayofyear', 'weekofyear']
+        # only use ones that are appropriate for your data
+        # for more information on other date parts see: https://pandas.pydata.org/docs/user_guide/timeseries.html#time-date-components
+        for date_part in self.date_parts_to_encode:
+            if hasattr(self.data.index.get_level_values(1), date_part):
+                self.data[date_part] = getattr(self.data.index.get_level_values(1), date_part)
+
+    def _build_data_encoder(self):
+        """Create data transformer based off of presence of different columns
+        
+        Standard data encoding scheme is as follows:
+            date parts are one-hot encoded
+            entity is target encoded
+        """
+        # create data encoder
+        self.data_encoder = make_pipeline(
+            OneHotEncoder(cols = self.date_parts_to_encode, use_cat_names = True))
+        
+        if self.encode_entity:
+            self.data_encoder.steps.append(('target_encoder', TargetEncoder(cols = ['entity'])))
+
+
+class StatsForecastingExperiment(_BaseExperimentClass):
+    """Empty Experimental Class for Jem to fill in"""
+    pass

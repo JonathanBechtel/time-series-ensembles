@@ -21,4 +21,40 @@ if __name__ == '__main__':
 
     if args.experiment == 'electricity_standard':
         electricity_standard.run()
+
+    elif args.experiment == 'covid_standard':
+        covid_standard.run()
+
+    elif args.experiment == 'fred_standard':
+        fred_standard.run()
+
+    elif args.experiment == 'traffic_standard':
+        traffic_standard.run()
+
+    elif args.experiment == 'hospital_standard':
+        hospital_standard.run()
+    
+    elif args.experiment == 'tourism_standard':
+        tourism_standard.run()
+
+    elif args.experiment == 'm1_standard':
+        m1_standard.run()
+
+    elif args.experiment == 'm3_standard':
+        m3_standard.run()
+
+    elif args.experiment == 'm4_standard':
+        m4_standard.run()
+
+    elif args.experiment == 'all':
+        electricity_standard.run()
+        covid_standard.run()
+        fred_standard.run()
+        traffic_standard.run()
+        hospital_standard.run()
+        tourism_standard.run()
+        m1_standard.run()
+        m3_standard.run()
+        m4_standard.run()
+
     
