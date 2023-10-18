@@ -50,7 +50,7 @@ fred_standard = MLForecastingExperiment(
 
 traffic_standard = MLForecastingExperiment(
     exp_name = 'traffic_initial',
-    data_file = 'traffic_monthly.csv',
+    data_file = 'traffic_weekly.csv',
     models = model_list,
     lags = [1, 2, 3, 4],
     calibration_windows = [3, 12, 36],
@@ -76,10 +76,10 @@ tourism_standard = MLForecastingExperiment(
     exp_name = 'tourism_initial',
     data_file = 'tourism_monthly.csv',
     models = model_list,
-    lags = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-    calibration_windows = [12, 24, 48, 96],
+    lags = [1, 2, 3, 4],
+    calibration_windows = [12, 24, 48, 72],
     date_parts_to_encode = ['month', 'quarter'],
-    target_transform = 'log_diff',
+    target_transform = 'log_diff_12',
     encode_entity = True,
     train_size = 240,
 )

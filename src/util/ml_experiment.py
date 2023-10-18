@@ -176,11 +176,17 @@ class MLForecastingExperiment(_BaseExperimentClass):
 
         # log transform target
         elif self.target_transform == 'log':
-            self.data['target'] = self.data.groupby(level = 0)['value'].apply(np.log1p)
+            self.data['target'] = self.data['value'].apply(np.log1p)
 
         # log difference target
         elif self.target_transform == 'log_diff':
-            self.data['target'] = self.data.groupby(level = 0)['value'].apply(np.log1p).diff().values
+            self.data['target'] = self.data['value'].apply(np.log1p)
+            self.data['target'] = self.data.groupby(level = 0)['target'].diff()
+
+        # year over year log difference target
+        elif self.target_transform == 'log_diff_12':
+            self.data['target'] = self.data['value'].apply(np.log1p)
+            self.data['target'] = self.data.groupby(level = 0)['value'].diff(12).values
 
         # no transformation
         elif self.target_transform == None:
