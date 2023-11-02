@@ -9,3 +9,4 @@ jupyter
 tqdm
 kaleido
 category_encoders
+xgboost

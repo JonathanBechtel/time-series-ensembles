@@ -6,11 +6,12 @@ from typing import Union
 import pandas as pd
 import numpy as np
 
+
 def convert_tsf_to_dataframe(
-    full_file_path_and_name : str,
-    replace_missing_vals_with : Union[str, float, int] = np.nan,
-    value_column_name : str = "series_value",
-    ) -> tuple:
+    full_file_path_and_name: str,
+    replace_missing_vals_with: Union[str, float, int] = np.nan,
+    value_column_name: str = "series_value",
+) -> tuple:
     """Converts the contents in a .tsf file into a dataframe and returns it along with other meta-data of the dataset
     such as frequency, horizon, presence of missing values, and presence of equal length timeseries
 
@@ -25,14 +26,14 @@ def convert_tsf_to_dataframe(
         Exception: Missing series information under data section
 
     Returns:
-        _type_: tuple, (data: pd.DataFrame, 
-        frequency: str, 
-        forecast_horizon: int, 
-        contain_missing_values: bool, 
+        _type_: tuple, (data: pd.DataFrame,
+        frequency: str,
+        forecast_horizon: int,
+        contain_missing_values: bool,
         contain_equal_length: bool)
 
     Example:
-        (loaded_data, frequency, forecast_horizon, 
+        (loaded_data, frequency, forecast_horizon,
         contain_missing_values, contain_equal_length) = convert_tsf_to_dataframe("TSForecasting/tsf_data/sample.tsf")
     """
     col_names = []
@@ -173,21 +174,23 @@ def convert_tsf_to_dataframe(
             contain_missing_values,
             contain_equal_length,
         )
-    
-def check_dataset_stationarity(df: pd.DataFrame, col_name = 'target') -> pd.DataFrame:
+
+
+def check_dataset_stationarity(df: pd.DataFrame, col_name="target") -> pd.DataFrame:
     """Function to check what portion of a dataset is stationary
 
     Args:
         df (pd.DataFrame): input data for time series modeling
 
     Returns:
-        pd.DataFrame: Dataframe with results of adfuller test for 
+        pd.DataFrame: Dataframe with results of adfuller test for
         each time series in the input dataframe
     """
     df = df.dropna()
-    return df.groupby(level = 0)[col_name].apply(check_stationarity)
+    return df.groupby(level=0)[col_name].apply(check_stationarity)
+
 
 def check_stationarity(series):
     """Run ADF Test on a Time series and check for stationarity"""
-    
-    return adfuller(series, regression = 'c')[1]
+
+    return adfuller(series, regression="c")[1]
